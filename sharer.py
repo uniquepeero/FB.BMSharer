@@ -42,7 +42,7 @@ class Sharer:
 
     def _firefox_config(self):
         options = {
-            # 'proxy': proxies
+            'proxy': proxies
         }
         fp = webdriver.FirefoxProfile()
         fp.set_preference("general.useragent.override", self._user_agent)  # choice useragent
@@ -53,70 +53,111 @@ class Sharer:
 
         return webdriver.Firefox(firefox_profile=fp, seleniumwire_options=options, executable_path='geckodriver.exe')
 
+    def _delay_typing(self, obj, text):
+        for letter in text:
+            obj.send_keys(letter)
+            sleep(random())
+
     def _create_fp(self):
-        self._driver.get('https://ipinfo.io/json')
+        # self._driver.get('https://ipinfo.io/json')
+        # sleep(3)
         # Login page
         self._driver.get(FB_URL)
-        login = self._driver.find_element_by_xpath('//*[@id="email"]')
-        password = self._driver.find_element_by_xpath('//*[@id="pass"]')
-        for letter in self._email:
-            login.send_keys(letter)
-            sleep(random())
-        for letter in self._password:
-            password.send_keys(letter)
-            sleep(random())
-        # Login btn
-        # self._driver.find_element_by_xpath('//*[@id="u_0_4"]').click()
-        self._driver.find_element_by_tag_name('body').send_keys(Keys.ENTER)
         try:
-            create_btn = self._driver.find_element_by_xpath('//*[@id="creation_hub_entrypoint"]')
+            login = self._driver.find_element_by_xpath('//*[@id="email"]')
+            password = self._driver.find_element_by_xpath('//*[@id="pass"]')
+            self._delay_typing(login, self._email)
+            self._delay_typing(password, self._password)
+            # Login btn
+            # self._driver.find_element_by_xpath('//*[@id="u_0_4"]').click()
+            self._driver.find_element_by_tag_name('body').send_keys(Keys.ENTER)
         except NoSuchElementException:
-            if 'checkpoint' in self._driver.current_url:
-                log.info('Account on checkpoint')
+            log.info('proxy error')
             self._driver.close()
             return
+        # try:
+        #     create_btn = self._driver.find_element_by_xpath('//*[@id="creation_hub_entrypoint"]')
+        # except NoSuchElementException:
+        #     if 'checkpoint' in self._driver.current_url:
+        #         log.info('Account on checkpoint')
+        #     self._driver.close()
+        #     return
+        #
+        # if create_btn:
+        #     self._driver.get("https://www.facebook.com/pages/create/")
+        # else:
+        #     log.warning('Cannot find create page button')
+        #     utils.save_page(self._driver.page_source, f'{self._email}_pre_create')
+        #     self._driver.close()
+        #     return
+        #
+        # self._submit_page()
+        # try:
+        #     # Picture skip btn
+        #     self._driver.find_element_by_xpath('//*[@id="content"]/div/div[2]/div[2]/a').click()
+        # except NoSuchElementException:
+        #     log.info('Skip pic not found')
+        #     input()
+        #     # self._driver.close()
+        #
+        #
+        # # Cover pic skip btn
+        # self._driver.find_element_by_xpath('//*[@id="content"]/div/div[2]/div[2]/a').click()
+        #
+        # self._fp_id = re.findall(r'\d+', self._driver.current_url)[0]
+        # log.info(f'FP created: {self._fp_id}')
 
-        if create_btn:
-            self._driver.get("https://www.facebook.com/pages/create/")
-        else:
-            log.warning('Cannot find create page button')
-            utils.save_page(self._driver.page_source, f'{self._email}_pre_create')
-            self._driver.close()
-            return None
+        self._fp_id = '109761237302026'
 
+
+        self._driver.get(f'{FB_URL}adsmanager/manage/campaigns')
+        input('Login?')
+        try:
+            login = self._driver.find_element_by_xpath('//*[@id="email"]')
+            password = self._driver.find_element_by_xpath('//*[@id="pass"]')
+            login.send_keys(self._email)
+            password.send_keys(self._password)
+            password.send_keys(Keys.ENTER)
+        except NoSuchElementException:
+            pass
+        sleep(30)
+        self._token = utils.get_token(self._driver.page_source, f'{self._email}_notoken')
+
+        self._driver.close()
+
+
+    def _submit_page(self):
         action = ActionChains(self._driver)
         action.move_by_offset(55, 105)
         action.click()
         action.perform()
 
         # Get started btn
-        btn = '/html/body/div[1]/div[3]/div[1]/div/div[2]/div/div[2]/table/tbody/tr/td[1]/div/div[1]/div[2]/button/div/div'
+        btn = '//*[@id="content"]/div/div[2]/div/div[2]/table/tbody/tr/td[1]/div/div[1]/div[2]/button'
         self._driver.find_element_by_xpath(btn).click()
 
         page_name = self._driver.find_element_by_xpath('//*[@id="BUSINESS_SUPERCATEGORYPageNameInput"]')
-        for letter in utils.get_random_string():
-            page_name.send_keys(letter)
-            sleep(random())
+        fp_name = utils.get_random_string()
+        self._delay_typing(page_name, fp_name)
         category = self._driver.find_element_by_xpath('//*[@id="js_6"]/input')
-        for letter in 'home decor':
-            category.send_keys(letter)
-            sleep(random())
+        self._delay_typing(category, 'home decor')
+        sleep(random() + 1)
+        for i in range(6):
+            category.send_keys(Keys.ARROW_UP)
         category.send_keys(Keys.ENTER)
 
         # Continue btn
         self._driver.find_element_by_xpath('//*[@id="content"]/div/div[2]/div/div[2]/table/tbody/tr/td[1]/div/div[2]/div[5]/button/div/div').click()
-        # Picture skip btn
-        self._driver.find_element_by_xpath('//*[@id="content"]/div/div[2]/div[2]/a').click()
-        # Cover pic skip btn
-        self._driver.find_element_by_xpath('//*[@id="content"]/div/div[2]/div[2]/a').click()
 
-        self._fp_id = re.findall(r'\d+', self._driver.current_url)[0]
-        log.info(f'FP created: {self._fp_id}')
+        try:
+            # Picture skip btn
+            self._driver.find_element_by_xpath('//*[@id="content"]/div/div[2]/div[2]/a').click()
+        except NoSuchElementException:
+            self._driver.get('https://www.facebook.com/pages/?category=your_pages')
+            soup = BeautifulSoup(self._driver.page_source)
+            links = soup.find_all('a', attrs={'href': re.compile(fp_name[1:].replace(' ', '-'))})
+            self._driver.get(links[0])
 
-        self._driver.get(f'{FB_URL}adsmanager/manage/campaigns')
-        self._token = utils.get_token(self._driver.page_source, f'{self._email}_notoken')
-
-        self._driver.close()
 
     def _check_user(self):
         log.info(f'Checking {self._email}:{self._password}')

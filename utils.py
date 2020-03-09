@@ -65,5 +65,5 @@ def get_token(page_source, name):
         return tokens[0]
     else:
         log.warning(f'Token not found')
-        save_page(page_source, )
+        save_page(page_source, name)
         return None
